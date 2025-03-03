@@ -11,12 +11,12 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, Field, ValidationError
+from typing import List
 
-# Define Recipe Schema
 class Recipe(BaseModel):
-    ingredients: List = Field(description="List of ingredients for preparing the dish")
-    process: List= Field(description="Steps to follow for preparing the dish")
-    varieties: List= Field(description="List of names of similar varieties to that dish")
+    ingredients: List[str] = Field(description="List of ingredients for preparing the dish")
+    process: List[str] = Field(description="Steps to follow for preparing the dish")
+    varieties: List[str] = Field(description="List of names of similar varieties to that dish")
 # Output parser
 output_parser = PydanticOutputParser(pydantic_object=Recipe)
 
