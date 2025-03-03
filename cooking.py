@@ -12,6 +12,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, Field, ValidationError
 from typing import List
+GOOGLE_API_KEY = "AIzaSyCBhbuJbxjlghoZ3X1HQhS_qwuMpSE1wC0"
 
 def stream_response(response_generator):
     response_text = ""
@@ -30,7 +31,7 @@ class Recipe(BaseModel):
 output_parser = PydanticOutputParser(pydantic_object=Recipe)
 
 # Load API key securely
-model = ChatGoogleGenerativeAI(model="gemini-1.5-pro", google_api_key=st.secrets["AIzaSyCBhbuJbxjlghoZ3X1HQhS_qwuMpSE1wC0"])
+model = ChatGoogleGenerativeAI(model="gemini-1.5-pro", google_api_key=st.secrets["GOOGLE_API_KEY"])
 
 # Prompt Template
 prompt_template = ChatPromptTemplate(
