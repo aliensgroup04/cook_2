@@ -82,4 +82,4 @@ if st.session_state.recipe:
             st.markdown("\n".join(f"{idx + 1}. {step}" for idx, step in enumerate(variety_recipe.process)))
 
 st.markdown("---")
-st.markdown("👨‍🍳 Made by Suman", unsafe_allow_html=True)
+st.markdown("Chef Assistant Made by Suman", unsafe_allow_html=True)
