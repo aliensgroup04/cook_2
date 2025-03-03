@@ -43,50 +43,47 @@ prompt_template = ChatPromptTemplate(
 chain = prompt_template | model | output_parser
 
 # Streamlit UI
-st.title("🍽️ AI Chef Assistant")
+st.title("🍽️ Chef Assistant")
+
+# Store recipe data
+if "recipe" not in st.session_state:
+    st.session_state.recipe = None
 
 dish_name = st.text_input("Enter a dish name", placeholder="E.g., Pasta, Biryani")
 
 if st.button("Get Recipe") and dish_name:
-    st.subheader(f"🍽️ Recipe for {dish_name}")
-
     with st.spinner("Fetching recipe...⏳"):
-        response_text = ""
-        for chunk in chain.stream({"dish_name": dish_name}):
-            response_text += chunk  # Collect streamed text
         try:
-            recipe = output_parser.parse(response_text)  # Parse full response
+            response = chain.stream({"dish_name": dish_name})
+            st.session_state.recipe = next(response)  # Process only the first valid response
         except Exception as e:
-            st.error(f"Error parsing recipe: {e}")
-            recipe = None
+            st.error(f"Error fetching recipe: {str(e)}")
 
-    # Display Recipe
-    if recipe:
-        st.subheader("🥕 Ingredients:")
-        st.markdown("\n".join(f"- {i}" for i in recipe.ingredients))
+# Display recipe
+if st.session_state.recipe:
+    recipe = st.session_state.recipe
+    st.subheader("🥕 Ingredients:")
+    st.markdown("\n".join(f"- {i}" for i in recipe.ingredients))
 
-        st.subheader("👨‍🍳 Preparation Steps:")
-        st.markdown("\n".join(f"{idx + 1}. {step}" for idx, step in enumerate(recipe.process)))
+    st.subheader("👨‍🍳 Preparation Steps:")
+    st.markdown("\n".join(f"{idx + 1}. {step}" for idx, step in enumerate(recipe.process)))
 
-        if recipe.varieties:
-            st.subheader("🍽️ Similar Varieties:")
+    # Ask if user wants to try a variety
+    if recipe.varieties:
+        with st.expander("🍽️ Similar Varieties", expanded=False):
             st.markdown("\n".join(f"- {v}" for v in recipe.varieties))
 
-            # Let user choose a variety
-            variety_name = st.selectbox("Try a variety:", ["Select"] + recipe.varieties)
-            if st.button("Get Variety Recipe") and variety_name != "Select":
-                st.subheader(f"🍽️ Recipe for {variety_name}")
-                with st.spinner(f"Fetching recipe for {variety_name}...⏳"):
-                    variety_response = ""
-                    for chunk in chain.stream({"dish_name": variety_name}):
-                        variety_response += chunk
-                    try:
-                        variety_recipe = output_parser.parse(variety_response)
-                    except Exception as e:
-                        st.error(f"Error parsing variety recipe: {e}")
-                        variety_recipe = None
+        variety_name = st.text_input("Try a variety! Enter a name:", placeholder="E.g., Chicken Biryani")
 
-                if variety_recipe:
+        if st.button("Get Variety Recipe") and variety_name:
+            with st.spinner(f"Fetching recipe for {variety_name}...⏳"):
+                try:
+                    variety_response = chain.stream({"dish_name": variety_name})
+                    variety_recipe = next(variety_response)
+                except Exception as e:
+                    st.error(f"Error fetching recipe: {str(e)}")
+                else:
+                    st.subheader(f"🍽️ Recipe for {variety_name}")
                     st.subheader("🥕 Ingredients:")
                     st.markdown("\n".join(f"- {i}" for i in variety_recipe.ingredients))
                     st.subheader("👨‍🍳 Preparation Steps:")
