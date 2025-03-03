@@ -13,30 +13,34 @@ from langchain_core.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, Field, ValidationError
 from typing import List
 
+def stream_response(response_generator):
+    response_text = ""
+    response_container = st.empty()
+    for chunk in response_generator:
+        response_text += chunk
+        response_container.markdown(response_text)
+    return response_text
+
 class Recipe(BaseModel):
-    ingredients: List[str] = Field(description="List of ingredients for preparing the dish")
-    process: List[str] = Field(description="Steps to follow for preparing the dish")
-    varieties: List[str] = Field(description="List of names of similar varieties to that dish")
+    ingredients: List[str] = Field(description="List of ingredients for the dish")
+    process: List[str] = Field(description="Steps to prepare the dish")
+    varieties: List[str] = Field(description="Similar dish varieties")
+
 # Output parser
 output_parser = PydanticOutputParser(pydantic_object=Recipe)
 
-model = ChatGoogleGenerativeAI(model="gemini-1.5-pro", google_api_key="AIzaSyCBhbuJbxjlghoZ3X1HQhS_qwuMpSE1wC0")
+# Load API key securely
+model = ChatGoogleGenerativeAI(model="gemini-1.5-pro", google_api_key=st.secrets["AIzaSyCBhbuJbxjlghoZ3X1HQhS_qwuMpSE1wC0"])
 
 # Prompt Template
 prompt_template = ChatPromptTemplate(
     messages=[
-        (
-            "system",
-            """You are a helpful AI Chef Assistant.
-            Given a dish name by the user, you provide the process of preparation step by step along with ingredients.
-            Output Format Instructions:
-            {output_format_instructions}""",
-        ),
-        ("human", "Give me the recipe and step-by-step instructions for cooking {dish_name}."),
+        ("system", """You are an AI Chef Assistant.
+                      Given a dish name, provide ingredients and step-by-step instructions.
+                      Format: {output_format_instructions}"""),
+        ("human", "Give me the recipe for {dish_name}.")
     ],
-    partial_variables={
-        "output_format_instructions": output_parser.get_format_instructions()
-    },
+    partial_variables={"output_format_instructions": output_parser.get_format_instructions()},
 )
 
 # Chain definition
@@ -54,8 +58,8 @@ dish_name = st.text_input("Enter a dish name", placeholder="E.g., Pasta, Biryani
 if st.button("Get Recipe") and dish_name:
     with st.spinner("Fetching recipe...⏳"):
         try:
-            response = chain.stream({"dish_name": dish_name})
-            st.session_state.recipe = next(response)  # Process only the first valid response
+            response_generator = chain.stream({"dish_name": dish_name})
+            st.session_state.recipe = stream_response(response_generator)
         except Exception as e:
             st.error(f"Error fetching recipe: {str(e)}")
 
@@ -78,8 +82,8 @@ if st.session_state.recipe:
         if st.button("Get Variety Recipe") and variety_name:
             with st.spinner(f"Fetching recipe for {variety_name}...⏳"):
                 try:
-                    variety_response = chain.stream({"dish_name": variety_name})
-                    variety_recipe = next(variety_response)
+                    variety_response_generator = chain.stream({"dish_name": variety_name})
+                    variety_recipe = stream_response(variety_response_generator)
                 except Exception as e:
                     st.error(f"Error fetching recipe: {str(e)}")
                 else:
