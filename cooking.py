@@ -45,16 +45,27 @@ chain = prompt_template | model | output_parser
 
 if st.button("Get Recipe") and dish_name:
     with st.spinner("Fetching recipe...⏳"):
-        response = chain.stream({"dish_name": dish_name})
-        if response:
+        response_text = ""
+        response_container = st.empty()  # Placeholder for streaming output
+
+        for chunk in chain.stream({"dish_name": dish_name}):
+            response_text += chunk
+            response_container.markdown(response_text)  # Display streaming text
+
+        # Try parsing the full streamed response into a structured format
+        try:
+            recipe = output_parser.parse(response_text)
             st.subheader("🛒 Ingredients")
-            st.write("\n".join(f"- {item}" for item in response.ingredients))
+            st.write("\n".join(f"- {item}" for item in recipe.ingredients))
 
             st.subheader("👨‍🍳 Preparation Steps")
-            st.write("\n".join(f"{i+1}. {step}" for i, step in enumerate(response.process)))
+            st.write("\n".join(f"{i+1}. {step}" for i, step in enumerate(recipe.process)))
 
             st.subheader("🍽️ Similar Dishes")
-            st.write(", ".join(response.varieties))
+            st.write(", ".join(recipe.varieties))
+
+        except ValidationError:
+            st.error("Error parsing recipe response. Please try again.")
 
 st.markdown("---")
 st.markdown("Chef Assistant Made by Suman", unsafe_allow_html=True)
