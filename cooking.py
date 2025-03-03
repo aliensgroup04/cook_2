@@ -13,39 +13,23 @@ from langchain_core.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, Field, ValidationError
 from typing import List
 
-def stream_response(response_generator):
-    response_text = ""
-    response_container = st.empty()
+st.title("🍽️ AI Chef Assistant")
 
-    # Initialize recipe fields
-    ingredients = []
-    process = []
-    varieties = []
+dish_name = st.text_input("Enter a dish name", placeholder="E.g., Pasta, Biryani")
 
-    for chunk in response_generator:
-        response_text += chunk
-        response_container.markdown(response_text)  # Display streaming text
-
-    # Convert full response text into a Recipe object
-    try:
-        recipe = output_parser.parse(response_text)
-        return recipe  # Ensure structured data is returned
-    except ValidationError as e:
-        st.error("Error parsing recipe response.")
-        return None
-
+# Define Recipe schema
 class Recipe(BaseModel):
     ingredients: List[str] = Field(description="List of ingredients for the dish")
     process: List[str] = Field(description="Steps to prepare the dish")
     varieties: List[str] = Field(description="Similar dish varieties")
 
-# Output parser
 output_parser = PydanticOutputParser(pydantic_object=Recipe)
 
 # Load API key securely
-model = ChatGoogleGenerativeAI(model="gemini-1.5-pro", google_api_key="AIzaSyCBhbuJbxjlghoZ3X1HQhS_qwuMpSE1wC0")
+model = ChatGoogleGenerativeAI(
+    model="gemini-1.5-pro", google_api_key=os.getenv("GOOGLE_API_KEY", "your_default_key")
+)
 
-# Prompt Template
 prompt_template = ChatPromptTemplate(
     messages=[
         ("system", """You are an AI Chef Assistant.
@@ -56,8 +40,8 @@ prompt_template = ChatPromptTemplate(
     partial_variables={"output_format_instructions": output_parser.get_format_instructions()},
 )
 
-# Chain definition
 chain = prompt_template | model | output_parser
+
 if st.button("Get Recipe") and dish_name:
     with st.spinner("Fetching recipe...⏳"):
         response = chain.invoke({"dish_name": dish_name})
