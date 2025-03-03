@@ -57,33 +57,61 @@ if st.button("Get Recipe"):
             varieties_placeholder = st.empty()
 
             try:
-                recipe = Recipe(ingredients=[], process=[], varieties=[])  # Initialize an empty recipe
+                recipe = Recipe(ingredients=[], process=[], varieties=[])
 
                 for chunk in chain.stream(input_data):
-                    if isinstance(chunk, Recipe):  # Ensure it's a valid Recipe object
-                        # Remove duplicates while maintaining order
-                        recipe.ingredients = list(dict.fromkeys(recipe.ingredients + chunk.ingredients))
-                        recipe.process = list(dict.fromkeys(recipe.process + chunk.process))
-                        recipe.varieties = list(dict.fromkeys(recipe.varieties + chunk.varieties))
+                    if isinstance(chunk, Recipe):
+                        # Remove duplicates & clean up data
+                        recipe.ingredients = list(dict.fromkeys(filter(None, [str(i).strip() for i in recipe.ingredients + chunk.ingredients])))
+                        recipe.process = list(dict.fromkeys(filter(None, [str(step).strip() for step in recipe.process + chunk.process])))
+                        recipe.varieties = list(dict.fromkeys(filter(None, [str(v).strip() for v in recipe.varieties + chunk.varieties])))
 
-                        # Update Ingredients List
+                        # Display Ingredients
                         with ingredients_placeholder.container():
                             st.subheader("🥕 Ingredients:")
-                            st.markdown("\n".join(f"- {i}" for i in recipe.ingredients))
+                            st.markdown("\n".join(f"- {i}" for i in recipe.ingredients if i.strip()))
 
-                        # Update Preparation Steps
+                        # Display Process Steps
                         with process_placeholder.container():
                             st.subheader("👨‍🍳 Preparation Steps:")
-                            st.markdown("\n".join(f"{idx + 1}. {step}" for idx, step in enumerate(recipe.process)))
+                            st.markdown("\n".join(f"{idx + 1}. {step}" for idx, step in enumerate(recipe.process) if step.strip()))
 
-                        # Update Varieties
+                        # Display Varieties
                         with varieties_placeholder.container():
-                            st.subheader("🍽️ Similar Varieties:")
-                            st.markdown("\n".join(f"- {v}" for v in recipe.varieties))
+                            if recipe.varieties:
+                                st.subheader("🍽️ Similar Varieties:")
+                                st.markdown("\n".join(f"- {v}" for v in recipe.varieties if v.strip()))
+
+                # Ask user if they want to check a variety recipe
+                if recipe.varieties:
+                    st.markdown("### Would you like to try any variety? Enter its name below:")
+                    variety_choice = st.text_input("Enter a variety name", placeholder="E.g., Chicken Biryani, Alfredo Pasta")
+
+                    if st.button("Get Variety Recipe"):
+                        if variety_choice.strip():
+                            with st.spinner(f"Fetching recipe for {variety_choice}...⏳"):
+                                input_data = {"dish_name": variety_choice}
+                                try:
+                                    variety_recipe = chain.invoke(input_data)
+
+                                    if isinstance(variety_recipe, Recipe):
+                                        st.subheader(f"🍽️ Recipe for {variety_choice}")
+
+                                        st.subheader("🥕 Ingredients:")
+                                        st.markdown("\n".join(f"- {i}" for i in variety_recipe.ingredients if i.strip()))
+
+                                        st.subheader("👨‍🍳 Preparation Steps:")
+                                        st.markdown("\n".join(f"{idx + 1}. {step}" for idx, step in enumerate(variety_recipe.process) if step.strip()))
+
+                                except ValidationError as e:
+                                    st.error("Error fetching variety recipe!")
+                                    st.write(str(e))
+                        else:
+                            st.warning("Please enter a variety name!")
 
             except ValidationError as e:
                 st.error("Error parsing the response. Try again!")
-                st.write(str(e))  # Display error details for debugging
+                st.write(str(e))
     else:
         st.warning("Please enter a dish name!")
 
