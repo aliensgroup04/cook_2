@@ -44,76 +44,42 @@ chain = prompt_template | model | output_parser
 
 # Streamlit UI
 st.title("Chef Assistant 🍽️")
-user_input = st.text_input("Enter your dish name", placeholder="E.g., Pasta, Biryani")
+if "recipe" not in st.session_state:
+    st.session_state.recipe = None
 
-if st.button("Get Recipe"):
-    if user_input:
-        with st.spinner("Fetching recipe...⏳"):
-            input_data = {"dish_name": user_input}
+# Get main dish recipe
+dish_name = st.text_input("Enter a dish name", placeholder="E.g., Pasta, Biryani")
 
-            # Streamlit placeholders for real-time updates
-            ingredients_placeholder = st.empty()
-            process_placeholder = st.empty()
-            varieties_placeholder = st.empty()
+if st.button("Get Recipe") and dish_name:
+    with st.spinner("Fetching recipe...⏳"):
+        st.session_state.recipe = chain.invoke({"dish_name": dish_name})
 
-            try:
-                recipe = Recipe(ingredients=[], process=[], varieties=[])
+# Display recipe
+if st.session_state.recipe:
+    recipe = st.session_state.recipe
+    st.subheader("🥕 Ingredients:")
+    st.markdown("\n".join(f"- {i}" for i in recipe.ingredients))
 
-                for chunk in chain.stream(input_data):
-                    if isinstance(chunk, Recipe):
-                        # Remove duplicates & clean up data
-                        recipe.ingredients = list(dict.fromkeys(filter(None, [str(i).strip() for i in recipe.ingredients + chunk.ingredients])))
-                        recipe.process = list(dict.fromkeys(filter(None, [str(step).strip() for step in recipe.process + chunk.process])))
-                        recipe.varieties = list(dict.fromkeys(filter(None, [str(v).strip() for v in recipe.varieties + chunk.varieties])))
+    st.subheader("👨‍🍳 Preparation Steps:")
+    st.markdown("\n".join(f"{idx + 1}. {step}" for idx, step in enumerate(recipe.process)))
 
-                        # Display Ingredients
-                        with ingredients_placeholder.container():
-                            st.subheader("🥕 Ingredients:")
-                            st.markdown("\n".join(f"- {i}" for i in recipe.ingredients if i.strip()))
+    # Ask if user wants to try a variety
+    if recipe.varieties:
+        st.subheader("🍽️ Similar Varieties:")
+        st.markdown("\n".join(f"- {v}" for v in recipe.varieties))
 
-                        # Display Process Steps
-                        with process_placeholder.container():
-                            st.subheader("👨‍🍳 Preparation Steps:")
-                            st.markdown("\n".join(f"{idx + 1}. {step}" for idx, step in enumerate(recipe.process) if step.strip()))
+        variety_name = st.text_input("Try a variety! Enter a name:", placeholder="E.g., Chicken Biryani")
 
-                        # Display Varieties
-                        with varieties_placeholder.container():
-                            if recipe.varieties:
-                                st.subheader("🍽️ Similar Varieties:")
-                                st.markdown("\n".join(f"- {v}" for v in recipe.varieties if v.strip()))
+        if st.button("Get Variety Recipe") and variety_name:
+            with st.spinner(f"Fetching recipe for {variety_name}...⏳"):
+                variety_recipe = chain.invoke({"dish_name": variety_name})
 
-                # Ask user if they want to check a variety recipe
-                if recipe.varieties:
-                    st.markdown("### Would you like to try any variety? Enter its name below:")
-                    variety_choice = st.text_input("Enter a variety name", placeholder="E.g., Chicken Biryani, Alfredo Pasta")
+            # Display variety recipe
+            st.subheader(f"🍽️ Recipe for {variety_name}")
+            st.subheader("🥕 Ingredients:")
+            st.markdown("\n".join(f"- {i}" for i in variety_recipe.ingredients))
+            st.subheader("👨‍🍳 Preparation Steps:")
+            st.markdown("\n".join(f"{idx + 1}. {step}" for idx, step in enumerate(variety_recipe.process)))
 
-                    if st.button("Get Variety Recipe"):
-                        if variety_choice.strip():
-                            with st.spinner(f"Fetching recipe for {variety_choice}...⏳"):
-                                input_data = {"dish_name": variety_choice}
-                                try:
-                                    variety_recipe = chain.invoke(input_data)
-
-                                    if isinstance(variety_recipe, Recipe):
-                                        st.subheader(f"🍽️ Recipe for {variety_choice}")
-
-                                        st.subheader("🥕 Ingredients:")
-                                        st.markdown("\n".join(f"- {i}" for i in variety_recipe.ingredients if i.strip()))
-
-                                        st.subheader("👨‍🍳 Preparation Steps:")
-                                        st.markdown("\n".join(f"{idx + 1}. {step}" for idx, step in enumerate(variety_recipe.process) if step.strip()))
-
-                                except ValidationError as e:
-                                    st.error("Error fetching variety recipe!")
-                                    st.write(str(e))
-                        else:
-                            st.warning("Please enter a variety name!")
-
-            except ValidationError as e:
-                st.error("Error parsing the response. Try again!")
-                st.write(str(e))
-    else:
-        st.warning("Please enter a dish name!")
-
-st.markdown("<hr>", unsafe_allow_html=True)
-st.markdown("<h5 style='color: gray;'>Chef Assistant made by Suman</h5>", unsafe_allow_html=True)
+st.markdown("---")
+st.markdown("👨‍🍳 Made by Suman", unsafe_allow_html=True)
