@@ -46,9 +46,6 @@ chain = prompt_template | model | output_parser
 st.title("Chef Assistant 🍽️")
 user_input = st.text_input("Enter your dish name", placeholder="E.g., Pasta, Biryani")
 
-st.title("Chef Assistant 🍽️")
-user_input = st.text_input("Enter your dish name", placeholder="E.g., Pasta, Biryani")
-
 if st.button("Get Recipe"):
     if user_input:
         with st.spinner("Fetching recipe...⏳"):
