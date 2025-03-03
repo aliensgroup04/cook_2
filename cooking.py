@@ -43,43 +43,34 @@ prompt_template = ChatPromptTemplate(
 chain = prompt_template | model | output_parser
 
 # Streamlit UI
-st.title("Chef Assistant 🍽️")
-if "recipe" not in st.session_state:
-    st.session_state.recipe = None
+st.title("🍽️ AI Chef Assistant")
 
-# Get main dish recipe
 dish_name = st.text_input("Enter a dish name", placeholder="E.g., Pasta, Biryani")
 
 if st.button("Get Recipe") and dish_name:
+    st.subheader(f"🍽️ Recipe for {dish_name}")
+    
     with st.spinner("Fetching recipe...⏳"):
-        st.session_state.recipe = chain.stream({"dish_name": dish_name})
+        recipe_container = st.empty()  # Placeholder to update the response
+        
+        # Stream response
+        recipe = None
+        for chunk in chain.stream({"dish_name": dish_name}):
+            if isinstance(chunk, Recipe):
+                recipe = chunk
+                break  # Stop when full recipe is received
 
-# Display recipe
-if st.session_state.recipe:
-    recipe = st.session_state.recipe
-    st.subheader("🥕 Ingredients:")
-    st.markdown("\n".join(f"- {i}" for i in recipe.ingredients))
+        # Display the recipe
+        if recipe:
+            recipe_container.subheader("🥕 Ingredients:")
+            recipe_container.markdown("\n".join(f"- {i}" for i in recipe.ingredients))
 
-    st.subheader("👨‍🍳 Preparation Steps:")
-    st.markdown("\n".join(f"{idx + 1}. {step}" for idx, step in enumerate(recipe.process)))
+            recipe_container.subheader("👨‍🍳 Preparation Steps:")
+            recipe_container.markdown("\n".join(f"{idx + 1}. {step}" for idx, step in enumerate(recipe.process)))
 
-    # Ask if user wants to try a variety
-    if recipe.varieties:
-        st.subheader("🍽️ Similar Varieties:")
-        st.markdown("\n".join(f"- {v}" for v in recipe.varieties))
-
-        variety_name = st.text_input("Try a variety! Enter a name:", placeholder="E.g., Chicken Biryani")
-
-        if st.button("Get Variety Recipe") and variety_name:
-            with st.spinner(f"Fetching recipe for {variety_name}...⏳"):
-                variety_recipe = chain.invoke({"dish_name": variety_name})
-
-            # Display variety recipe
-            st.subheader(f"🍽️ Recipe for {variety_name}")
-            st.subheader("🥕 Ingredients:")
-            st.markdown("\n".join(f"- {i}" for i in variety_recipe.ingredients))
-            st.subheader("👨‍🍳 Preparation Steps:")
-            st.markdown("\n".join(f"{idx + 1}. {step}" for idx, step in enumerate(variety_recipe.process)))
+            if recipe.varieties:
+                recipe_container.subheader("🍽️ Similar Varieties:")
+                recipe_container.markdown("\n".join(f"- {v}" for v in recipe.varieties))
 
 st.markdown("---")
 st.markdown("Chef Assistant Made by Suman", unsafe_allow_html=True)
