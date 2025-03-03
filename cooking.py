@@ -45,7 +45,7 @@ chain = prompt_template | model | output_parser
 
 if st.button("Get Recipe") and dish_name:
     with st.spinner("Fetching recipe...⏳"):
-        response = chain.invoke({"dish_name": dish_name})
+        response = chain.stream({"dish_name": dish_name})
         if response:
             st.subheader("🛒 Ingredients")
             st.write("\n".join(f"- {item}" for item in response.ingredients))
