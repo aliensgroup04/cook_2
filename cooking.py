@@ -49,10 +49,10 @@ if st.button("Get Recipe") and dish_name:
         response_container = st.empty()  
 
         for chunk in chain.stream({"dish_name": dish_name}):
-            response_text += chunk.content  # Extract text from response chunk
+            response_text += str(chunk)  # Convert chunk to string if needed
             response_container.markdown(response_text)  
 
-        # Convert to Recipe format
+        # Convert full streamed response into Recipe format
         try:
             recipe = output_parser.parse(response_text)
             st.subheader("🛒 Ingredients")
