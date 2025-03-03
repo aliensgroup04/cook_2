@@ -58,13 +58,18 @@ prompt_template = ChatPromptTemplate(
 
 # Chain definition
 chain = prompt_template | model | output_parser
-dish_name = st.text_input("Enter a dish name", placeholder="E.g., Pasta, Biryani")
-# Streamlit UI
-st.title("🍽️ Chef Assistant")
-
 if st.button("Get Recipe") and dish_name:
     with st.spinner("Fetching recipe...⏳"):
-        chain.invoke({"dish_name": dish_name})
+        response = chain.invoke({"dish_name": dish_name})
+        if response:
+            st.subheader("🛒 Ingredients")
+            st.write("\n".join(f"- {item}" for item in response.ingredients))
+
+            st.subheader("👨‍🍳 Preparation Steps")
+            st.write("\n".join(f"{i+1}. {step}" for i, step in enumerate(response.process)))
+
+            st.subheader("🍽️ Similar Dishes")
+            st.write(", ".join(response.varieties))
 
 st.markdown("---")
 st.markdown("Chef Assistant Made by Suman", unsafe_allow_html=True)
