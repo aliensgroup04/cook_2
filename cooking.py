@@ -16,10 +16,23 @@ from typing import List
 def stream_response(response_generator):
     response_text = ""
     response_container = st.empty()
+
+    # Initialize recipe fields
+    ingredients = []
+    process = []
+    varieties = []
+
     for chunk in response_generator:
         response_text += chunk
-        response_container.markdown(response_text)
-    return response_text
+        response_container.markdown(response_text)  # Display streaming text
+
+    # Convert full response text into a Recipe object
+    try:
+        recipe = output_parser.parse(response_text)
+        return recipe  # Ensure structured data is returned
+    except ValidationError as e:
+        st.error("Error parsing recipe response.")
+        return None
 
 class Recipe(BaseModel):
     ingredients: List[str] = Field(description="List of ingredients for the dish")
