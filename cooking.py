@@ -52,7 +52,7 @@ dish_name = st.text_input("Enter a dish name", placeholder="E.g., Pasta, Biryani
 
 if st.button("Get Recipe") and dish_name:
     with st.spinner("Fetching recipe...⏳"):
-        st.session_state.recipe = chain.invoke({"dish_name": dish_name})
+        st.session_state.recipe = chain.stream({"dish_name": dish_name})
 
 # Display recipe
 if st.session_state.recipe:
