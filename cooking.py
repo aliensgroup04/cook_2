@@ -49,28 +49,48 @@ dish_name = st.text_input("Enter a dish name", placeholder="E.g., Pasta, Biryani
 
 if st.button("Get Recipe") and dish_name:
     st.subheader(f"🍽️ Recipe for {dish_name}")
-    
+
     with st.spinner("Fetching recipe...⏳"):
-        recipe_container = st.empty()  # Placeholder to update the response
-        
-        # Stream response
-        recipe = None
+        response_text = ""
         for chunk in chain.stream({"dish_name": dish_name}):
-            if isinstance(chunk, Recipe):
-                recipe = chunk
-                break  # Stop when full recipe is received
+            response_text += chunk  # Collect streamed text
+        try:
+            recipe = output_parser.parse(response_text)  # Parse full response
+        except Exception as e:
+            st.error(f"Error parsing recipe: {e}")
+            recipe = None
 
-        # Display the recipe
-        if recipe:
-            recipe_container.subheader("🥕 Ingredients:")
-            recipe_container.markdown("\n".join(f"- {i}" for i in recipe.ingredients))
+    # Display Recipe
+    if recipe:
+        st.subheader("🥕 Ingredients:")
+        st.markdown("\n".join(f"- {i}" for i in recipe.ingredients))
 
-            recipe_container.subheader("👨‍🍳 Preparation Steps:")
-            recipe_container.markdown("\n".join(f"{idx + 1}. {step}" for idx, step in enumerate(recipe.process)))
+        st.subheader("👨‍🍳 Preparation Steps:")
+        st.markdown("\n".join(f"{idx + 1}. {step}" for idx, step in enumerate(recipe.process)))
 
-            if recipe.varieties:
-                recipe_container.subheader("🍽️ Similar Varieties:")
-                recipe_container.markdown("\n".join(f"- {v}" for v in recipe.varieties))
+        if recipe.varieties:
+            st.subheader("🍽️ Similar Varieties:")
+            st.markdown("\n".join(f"- {v}" for v in recipe.varieties))
+
+            # Let user choose a variety
+            variety_name = st.selectbox("Try a variety:", ["Select"] + recipe.varieties)
+            if st.button("Get Variety Recipe") and variety_name != "Select":
+                st.subheader(f"🍽️ Recipe for {variety_name}")
+                with st.spinner(f"Fetching recipe for {variety_name}...⏳"):
+                    variety_response = ""
+                    for chunk in chain.stream({"dish_name": variety_name}):
+                        variety_response += chunk
+                    try:
+                        variety_recipe = output_parser.parse(variety_response)
+                    except Exception as e:
+                        st.error(f"Error parsing variety recipe: {e}")
+                        variety_recipe = None
+
+                if variety_recipe:
+                    st.subheader("🥕 Ingredients:")
+                    st.markdown("\n".join(f"- {i}" for i in variety_recipe.ingredients))
+                    st.subheader("👨‍🍳 Preparation Steps:")
+                    st.markdown("\n".join(f"{idx + 1}. {step}" for idx, step in enumerate(variety_recipe.process)))
 
 st.markdown("---")
 st.markdown("Chef Assistant Made by Suman", unsafe_allow_html=True)
